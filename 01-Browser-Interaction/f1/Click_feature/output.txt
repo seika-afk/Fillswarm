@@ -1,0 +1,13 @@
+LOGS FOR OUTPUTS  :
+
+----------
+Not found
+----------
+prompt :
+get me the Bio of his github
+output:
+software developer — writing systems, not just code
+----------
+prompt: get me the number of contribution in last year
+output:
+718
