@@ -13,7 +13,7 @@ const run = async () => {
   form.append("url", "https://input-fields-theta.vercel.app/");
   form.append(
     "fieldData",
-    "set my fav pokemon as charizard and select trainer as collector,agree to terms "
+    " set my email as ash@pallet.com and then set my fav pokemon as charizard and select trainer type as collector,agree to terms "
   );
   form.append("finalQuery", "summarize what is in the page after submission");
 

@@ -19,6 +19,28 @@ export function createBrowserTools(session: BrowserSession) {
     },
   );
 
+
+
+    const upload_pdf_tool = tool(
+      async ({ label ,resume_path}) => {
+        const fileChooserPromise = session.page.waitForEvent('filechooser',{ timeout: 10_000 });
+        await session.page.getByText(label).click();
+        const fileChooser = await fileChooserPromise;
+        await fileChooser.setFiles(resume_path);
+        return "Successfully inserted PDF File"
+      }
+
+      , {
+      name: "upload_pdf",
+      description: "Upload resume or pdf file to specified upload component .",
+      schema: z.object({
+        label: z.string().describe("Label of the upload file component"),
+        resume_path:z.string().describe("Local file path to the resume/PDF to upload")
+      })
+
+    })
+
+
   const selectOptionTool = tool(
     async ({ label, value }) => {
       const locator = session.page.getByLabel(label);
@@ -112,6 +134,7 @@ export function createBrowserTools(session: BrowserSession) {
     uncheckCheckboxTool,
     selectRadioTool,
     clickButtonTool,
+    upload_pdf_tool,
     browserTools: [
       fillInputTool,
       selectOptionTool,
@@ -119,6 +142,7 @@ export function createBrowserTools(session: BrowserSession) {
       uncheckCheckboxTool,
       selectRadioTool,
       clickButtonTool,
+      upload_pdf_tool
     ],
   };
 }

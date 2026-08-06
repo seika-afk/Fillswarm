@@ -14,7 +14,7 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 export const model = new ChatOpenRouter({
   model: "deepseek/deepseek-chat-v3.1",
   temperature: 0,
-  maxTokens: 200,
+  maxTokens: 600,
 });
 
 const supportedTools = [
@@ -24,17 +24,19 @@ const supportedTools = [
   "uncheck_checkbox",
   "select_radio",
   "click_button",
+  "upload_pdf_tool"
 ] as const;
 
 const formActionSchema = z.object({
   tool: z.enum(supportedTools),
   label: z.string().describe("Visible label or control text"),
   value: z.string().nullable().optional().describe("Value to type or option text to select"),
+  resume_path: z.string().nullable().optional().describe("Local file path for PDF upload actions"),
 });
 
 const extractSchema = z.object({
   actions: z.array(formActionSchema).describe("Ordered list of form actions to run"),
-  error: z.string().optional().describe("Set when required fields are missing or incomplete"),
+  error: z.string().nullable().optional().describe("Set when required fields are missing or incomplete"),
 });
 
 type FormAction = z.infer<typeof formActionSchema>;
@@ -47,11 +49,12 @@ export type BrowserState = {
   error?: string;
   success?: boolean;
   answer?: string;
+  resume_path: string;
 };
 
 const extractModel = model.withStructuredOutput(extractSchema, {
   name: "Extract Form Actions",
-  method: "jsonSchema",
+  method: "functionCalling",
 });
 
 export async function run_graph(
@@ -59,6 +62,7 @@ export async function run_graph(
   html: string,
   field_data: string,
   query: string,
+  resume_path: string,
 ) {
   const {
     fillInputTool,
@@ -67,6 +71,7 @@ export async function run_graph(
     uncheckCheckboxTool,
     selectRadioTool,
     clickButtonTool,
+    upload_pdf_tool
   } = createBrowserTools(session);
 
   async function runAction(action: FormAction) {
@@ -95,6 +100,16 @@ export async function run_graph(
         return selectRadioTool.func({ label: action.label });
       case "click_button":
         return clickButtonTool.func({ label: action.label });
+      case "upload_pdf_tool": {
+        const resumePath = action.resume_path ?? action.value;
+        if (typeof resumePath !== "string") {
+          throw new Error(`Missing resume_path for tool: ${action.tool} (${action.label})`);
+        }
+        return upload_pdf_tool.func({
+          label: action.label,
+          resume_path: resumePath,
+        });
+      }
       default:
         throw new Error(`Unsupported tool: ${action.tool}`);
     }
@@ -108,15 +123,18 @@ export async function run_graph(
       },
       {
         role: "user",
-        content: `HTML CONTENT:\n${state.html}\n\nFIELD DATA:\n${state.field_data}`,
-      },
+        content: `HTML CONTENT:\n${state.html}\n\nFIELD DATA:\n${state.field_data}\n\nRESUME PATH:\n${
+          state.resume_path ? state.resume_path : "No resume file was provided for this request."
+        }`,    },
     ]);
 
     console.log("-----LLM extraction response-----");
     console.log(response);
     console.log("--------------------------------");
 
-    if (response.error) {
+    const hasError = Boolean(response.error) && response.error !== "null";
+
+    if (hasError) {
       return {
         actions: [],
         error: response.error,
@@ -205,6 +223,7 @@ export async function run_graph(
       error: {},
       success: {},
       answer: {},
+      resume_path:{}
     },
   });
 
@@ -221,6 +240,7 @@ export async function run_graph(
     final_query: query,
     html,
     field_data,
+    resume_path
   });
 
   return result.answer ?? "";

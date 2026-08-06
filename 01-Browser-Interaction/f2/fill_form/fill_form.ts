@@ -2,7 +2,7 @@ import { pathToFileURL } from "url";
 import { gotoWithRetries, withBrowserSession } from "../../shared/browser";
 import { run_graph } from "./llm";
 
-export async function runFillFlow(url: string, fieldData: string, query: string) {
+export async function runFillFlow(url: string, fieldData: string, query: string,resumePath:string) {
   const startedAt = Date.now();
 
   return withBrowserSession(async (session) => {
@@ -16,7 +16,7 @@ export async function runFillFlow(url: string, fieldData: string, query: string)
       console.log("--- RECIEVED HTML ");
       console.log(" FORWARDING TO LLM Graph");
 
-      const answer = await run_graph(session, html, fieldData, query);
+      const answer = await run_graph(session, html, fieldData, query,resumePath);
 
       return {
         answer,
